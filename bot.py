@@ -81,7 +81,7 @@ async def buscar(ctx, *, nome_jogo):
             loja = deal['shop']['name']
             preco_atual = deal['price']['amount']
             preco_normal = deal['regular']['amount']
-            desconto = deal.get['cut', 0]
+            desconto = deal.get('cut', 0)
             url_loja = deal['url']
 
             info_preco = f"**R${preco_atual:.2f}** "
