@@ -84,7 +84,7 @@ async def buscar(ctx, *, nome_jogo):
             desconto = deal.get['cut', 0]
             url_loja = deal['url']
 
-            info_preco = f"**R${preco_normal:.2f}**"
+            info_preco = f"**R${preco_atual:.2f}** "
             if desconto > 0:
                 info_preco+=f"~~R${preco_normal:.2f}~~ (-{desconto}%)"
 
