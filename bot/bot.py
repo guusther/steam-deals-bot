@@ -32,27 +32,32 @@ async def ping(ctx):
     await ctx.send('Pong!')
 
 @bot.command()
-async def batman(ctx):
-    await ctx.send("Buscando dados do Batman...")
+async def buscar(ctx, *, nome_jogo):
+    await ctx.send(f"Buscando dados do {nome_jogo}...")
 
-    url = "https://www.cheapshark.com/api/1.0/games?title=batman"
+    #pega o link da api
+    url = f"https://www.cheapshark.com/api/1.0/games?title={nome_jogo}"
 
-    email = os.getenv("USER_EMAIL")
-    autentificador = {'User-Agent': 'SteamDealsBot/1.0 ({email})'}
 
+    USER_EMAIL = os.getenv('USER_EMAIL')
+    autentificador = {'User-Agent': f'SteamDealsBot/1.0 ({USER_EMAIL})'}
+
+    #pega os dados da api e joga num json
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=autentificador) as resposta:
             dados = await resposta.json()
 
-    print("Resposta da API:", dados)
-
+    #segurança pro bot nao quebrar
     if isinstance(dados,list) and len(dados) > 0:
-        primeiro_jogo = dados[0]
-        nome = primeiro_jogo['external']
-        preco = primeiro_jogo['cheapest']
+        for jogo in dados[:3]:
+            nome = jogo['external']
+            preco = jogo['cheapest']
 
-        await ctx.send(f"{nome}\n Menor preço encontrado: {preco}")
+            print(f"Jogo: {nome} || Preço: {preco}")
+            print("=============")
+
+            await ctx.send(f"{nome}\nMenor preço encontrado: {preco}\n")
     else:
-        await ctx.send("Não foi possível encontrar o jogo.")
-
+        await ctx.send("Jogo não encontrado.")
+        
 bot.run(TOKEN)
