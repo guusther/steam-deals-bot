@@ -56,6 +56,13 @@ async def buscar(ctx, *, nome_jogo):
             print(f"Jogo: {nome} || Preço: {preco}")
             print("=============")
 
+            embed = discord.Embed(
+                title=nome, description=preco, color=discord.Color.blue()
+            )
+
+            embed.set_image(url=jogo['thumb'])
+            await ctx.send(embed=embed)
+
             await ctx.send(f"{nome}\nMenor preço encontrado: {preco}\n")
     else:
         await ctx.send("Jogo não encontrado.")
