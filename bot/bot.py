@@ -64,6 +64,25 @@ async def buscar(ctx, *, nome_jogo):
             precoUSD = float(jogo['cheapest'])
             precoBRL = precoUSD * cotacao
 
+            steamID = jogo.get('steamAppID')
+
+            preco_steam_oficial = "Indisponível na Steam BR"
+
+            if steamID:
+                steamURL = f"https://store.steampowered.com/api/appdetails?appids={steamID}&cc=br"
+                async with aiohttp.ClientSession() as session_steam:
+                    async with session_steam.get(steamURL) as resposta_steam:
+                        dados_steam = await resposta_steam.json()
+
+                info_jogo = dados_steam.get(str(steamID), {})
+                if info_jogo.get('success') and 'data' in info_jogo:
+                    data = info_jogo['data']
+
+                    if data.get('is_free'):
+                        preco_steam_oficial = "Gratuito"
+                    elif 'price_overview' in data:
+                        preco_steam_oficial = data['price_overview']['final_formatted']
+                        
             dealId = jogo['cheapestDealID']
             linkId = f"https://www.cheapshark.com/redirect?dealID={dealId}"
 
@@ -71,7 +90,7 @@ async def buscar(ctx, *, nome_jogo):
             print("=============")
 
             embed = discord.Embed(
-                title=nome, description=f"Menor preço encontrado: **R${precoBRL:.2f}** (**${precoUSD:.2f}**)"
+                title=nome, description=f"Menor preço encontrado: **R${precoBRL:.2f}** (**${precoUSD:.2f}**) || Preço na Steam: **{preco_steam_oficial}**"
                 , color=discord.Color.dark_blue(), url=linkId
             )
 
