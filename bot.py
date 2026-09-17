@@ -79,14 +79,16 @@ async def buscar(ctx, *, nome_jogo):
         if dados_img:
             linkIMG = dados_img[0]['thumb']
 
-        if linkIMG:
-            embed.set_image(url=linkIMG)
 
         embed = discord.Embed(
             title=f"Ofertas: {game_title}",
             description="Preços atualizados(Nuuvem, Steam, Epic, etc):",
             color=discord.Color.dark_blue()
         )
+
+        if linkIMG:
+            embed.set_image(url=linkIMG)
+
 
         for deal in deals[:5]:
             loja = deal['shop']['name']
