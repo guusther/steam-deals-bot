@@ -36,7 +36,9 @@ async def cotacaoDolar():
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resposta:
             dados = await resposta.json()
-            return float(dados['USDBRL']['bid'])
+            
+            usd_data = dados.get('USDBRL', {})
+            return float(usd_data.get('bid', 5.50))
 
 @bot.command()
 async def buscar(ctx, *, nome_jogo):
@@ -98,5 +100,31 @@ async def buscar(ctx, *, nome_jogo):
             await ctx.send(embed=embed)
     else:
         await ctx.send("Jogo não encontrado.")
-        
-bot.run(TOKEN)
+
+
+import os
+import asyncio
+from aiohttp import web
+
+# 1. Endpoint simples para o Render verificar que o serviço está ativo
+async def handle_ping(request):
+    return web.Response(text="Bot de ofertas operacional!")
+
+# 2. Servidor web dummy na porta dinâmica do Render
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get('/', handle_ping)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    
+    port = int(os.getenv('PORT', 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+
+# 3. Execução paralela do servidor web e do bot do Discord
+async def main():
+    await start_web_server()
+    await bot.start(TOKEN)
+
+if __name__ == '__main__':
+    asyncio.run(main())
