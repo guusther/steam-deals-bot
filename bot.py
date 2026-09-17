@@ -7,6 +7,7 @@ import aiohttp
 #pega o token no .env
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+ITAD_API_KEY = os.getenv('ITAD_API_KEY')
 
 #ativa o pacote padrao de eventos do dc. basicamente diz ao server que o bot quer
 #receber maioria das notificações comuns
@@ -31,75 +32,69 @@ async def on_ready():
 async def ping(ctx):
     await ctx.send('Pong!')
 
-async def cotacaoDolar():
-    url = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resposta:
-            dados = await resposta.json()
-            
-            usd_data = dados.get('USDBRL', {})
-            return float(usd_data.get('bid', 5.50))
 
 @bot.command()
 async def buscar(ctx, *, nome_jogo):
-    await ctx.send(f"Buscando dados do {nome_jogo}...")
+    if not ITAD_API_KEY:
+        await ctx.send("Erro: A Chave API do IsThereAnyDeal não foi configurada.")
+        return
 
-    #pega o link da api
-    url = f"https://www.cheapshark.com/api/1.0/games?title={nome_jogo}"
+    await ctx.send(f"Buscando ofertas para **{nome_jogo}**...")
 
-
-    USER_EMAIL = os.getenv('USER_EMAIL')
-    autentificador = {'User-Agent': f'SteamDealsBot/1.0 ({USER_EMAIL})'}
-
-    #pega os dados da api e joga num json
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=autentificador) as resposta:
+        #busca da url
+        url_busca = f"https://api.isthereanydeal.com/games/search/v1?key={ITAD_API_KEY}&title={nome_jogo}"
+
+        async with session.get(url_busca) as resposta:
+            if resposta.status != 200:
+                await ctx.send("Erro ao conectar com a API")
+                return
             dados = await resposta.json()
 
-    #segurança pro bot nao quebrar
-    if isinstance(dados,list) and len(dados) > 0:
+        if not dados:
+            await ctx.send("Jogo não foi encontrado.")
+            return
 
-        cotacao = await cotacaoDolar()
+        #pega o 1o jogo da busca
+        jogo = dados[0]
+        game_id = jogo['id']
+        game_title = jogo['title']
 
-        for jogo in dados[:1]:
-            nome = jogo['external']
-            precoUSD = float(jogo['cheapest'])
-            precoBRL = precoUSD * cotacao
+        #busca ofertas em brl
+        precosURL = f"https://api.isthereanydeal.com/games/prices/v3?key={ITAD_API_KEY}&country=BR"
+        async with session.post(precosURL, json=[game_id]) as respostaPreco:
+            dados_precos = await respostaPreco.json()
 
-            steamID = jogo.get('steamAppID')
+        if not dados_precos or not dados_precos[0].get('deals'):
+            await ctx.send(f"Nenhuma oferta ativa encontrada no Brasil para **{game_title}**")
+            return
 
-            preco_steam_oficial = "Indisponível na Steam BR"
+        deals = dados_precos[0]['deals']
 
-            if steamID:
-                steamURL = f"https://store.steampowered.com/api/appdetails?appids={steamID}&cc=br"
-                async with aiohttp.ClientSession() as session_steam:
-                    async with session_steam.get(steamURL) as resposta_steam:
-                        dados_steam = await resposta_steam.json()
+        embed = discord.Embed(
+            title=f"Ofertas: {game_title}",
+            description="Preços atualizados(Nuuvem, Steam, Epic, etc):",
+            color=discord.Color.dark_blue()
+        )
 
-                info_jogo = dados_steam.get(str(steamID), {})
-                if info_jogo.get('success') and 'data' in info_jogo:
-                    data = info_jogo['data']
+        for deal in deals[:5]:
+            loja = deal['shop']['name']
+            preco_atual = deal['price']['amount']
+            preco_normal = deal['regular']['amount']
+            desconto = deal.get['cut', 0]
+            url_loja = deal['url']
 
-                    if data.get('is_free'):
-                        preco_steam_oficial = "Gratuito"
-                    elif 'price_overview' in data:
-                        preco_steam_oficial = data['price_overview']['final_formatted']
-                        
-            dealId = jogo['cheapestDealID']
-            linkId = f"https://www.cheapshark.com/redirect?dealID={dealId}"
+            info_preco = f"**R${preco_normal:.2f}**"
+            if desconto > 0:
+                info_preco+=f"~~R${preco_normal:.2f}~~ (-{desconto}%)"
 
-            print(f"Jogo: {nome} || Preço: {precoBRL}")
-            print("=============")
-
-            embed = discord.Embed(
-                title=nome, description=f"Menor preço encontrado: **R${precoBRL:.2f}** (**${precoUSD:.2f}**) || Preço na Steam: **{preco_steam_oficial}**"
-                , color=discord.Color.dark_blue(), url=linkId
+            embed.add_field(
+                name=f"{loja}",
+                value=f"{info_preco}\n[Ir para a loja]({url_loja})",
+                inline=False
             )
+        await ctx.send(embed=embed)
 
-            embed.set_image(url=jogo['thumb'])
-            await ctx.send(embed=embed)
-    else:
-        await ctx.send("Jogo não encontrado.")
 
 
 import os
