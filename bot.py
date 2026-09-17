@@ -61,7 +61,7 @@ async def buscar(ctx, *, nome_jogo):
 
         cotacao = await cotacaoDolar()
 
-        for jogo in dados[0]:
+        for jogo in dados[:1]:
             nome = jogo['external']
             precoUSD = float(jogo['cheapest'])
             precoBRL = precoUSD * cotacao
