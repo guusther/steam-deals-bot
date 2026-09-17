@@ -72,7 +72,11 @@ async def buscar(ctx, *, nome_jogo):
         deals = dados_precos[0]['deals']
 
         url_imagem = f"https://www.cheapshark.com/api/1.0/games?title={nome_jogo}&limit=1"
-        async with session.get(url_imagem) as respostaIMG:
+
+        USER_EMAIL = os.getenv('USER_EMAIL')
+        autentificador = {'User-Agent': f'SteamDealsBot/1.0 ({USER_EMAIL})'}
+
+        async with session.get(url_imagem, headers=autentificador) as respostaIMG:
             dados_img = await respostaIMG.json()
 
         linkIMG = None
