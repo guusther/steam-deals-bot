@@ -35,22 +35,29 @@ async def ping(ctx):
 
 @bot.command()
 async def buscar(ctx, *, nome_jogo):
+
+    #trava de segurança. se o render esquecer de carregar a var de ambiente ele avisa no chat e retorna
     if not ITAD_API_KEY:
         await ctx.send("Erro: A Chave API do IsThereAnyDeal não foi configurada.")
         return
 
+    #isso aqui é um aviso pra quem usou o bot saber que ele ta executando a tarefa
     await ctx.send(f"Buscando ofertas para **{nome_jogo}**...")
 
+
+    #cria uma sessao http
     async with aiohttp.ClientSession() as session:
         #busca da url
         url_busca = f"https://api.isthereanydeal.com/games/search/v1?key={ITAD_API_KEY}&title={nome_jogo}"
 
+        #acessa a pagina e retorna um json
         async with session.get(url_busca) as resposta:
             if resposta.status != 200:
                 await ctx.send("Erro ao conectar com a API")
                 return
             dados = await resposta.json()
 
+        #se dados nao tiver nada na lista significa que o jogo nao foi encontrado
         if not dados:
             await ctx.send("Jogo não foi encontrado.")
             return
@@ -62,6 +69,9 @@ async def buscar(ctx, *, nome_jogo):
 
         #busca ofertas em brl
         precosURL = f"https://api.isthereanydeal.com/games/prices/v3?key={ITAD_API_KEY}&country=BR"
+
+        #eh enviado o id que foi descoberto amteriormente demtrp do pacote json=[game_id], pedindo
+        #os precos da regiao esoclhida(nesse caso foi o brasil)
         async with session.post(precosURL, json=[game_id]) as respostaPreco:
             dados_precos = await respostaPreco.json()
 
@@ -69,8 +79,10 @@ async def buscar(ctx, *, nome_jogo):
             await ctx.send(f"Nenhuma oferta ativa encontrada no Brasil para **{game_title}**")
             return
 
+        #filtra apenas a parte das promocoes
         deals = dados_precos[0]['deals']
 
+        #isso daqui foi uma gambiarra pra puxar a imagem do jogo do cheapshark
         url_imagem = f"https://www.cheapshark.com/api/1.0/games?title={nome_jogo}&limit=1"
 
         USER_EMAIL = os.getenv('USER_EMAIL')
